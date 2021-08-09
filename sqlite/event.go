@@ -62,6 +62,45 @@ func (s *EventService) CreateEvent(ctx context.Context, e themis.EventCreate) (*
 	return event, tx.Commit()
 }
 
+// ListAll returns a list of all events in the database.
+func (s *EventService) ListAll(ctx context.Context) ([]*themis.Event, error) {
+	rows, err := s.db.db.QueryContext(ctx, `
+		SELECT
+			id,
+			uuid,
+			title,
+			description
+		FROM
+			events
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var id int
+	var uuid, title, description string
+	var events []*themis.Event
+
+	for rows.Next() {
+		if err := rows.Scan(&id, &uuid, &title, &description); err != nil {
+			return nil, err
+		}
+
+		events = append(events, &themis.Event{
+			ID:          id,
+			UUID:        uuid,
+			Title:       title,
+			Description: description,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return events, nil
+}
+
 func createEvent(ctx context.Context, tx *Tx, data themis.EventCreate, uuid string) (*themis.Event, error) {
 	result, err := tx.ExecContext(ctx, `
 		INSERT INTO events (

@@ -2,6 +2,7 @@ package sqlite_test
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/stillwondering/themis"
@@ -34,5 +35,49 @@ func TestCreateEvent(t *testing.T) {
 
 	if expectedEvent != *event {
 		t.Fatalf("expected: %v\ngot: %v", expectedEvent, *event)
+	}
+}
+
+func TestListAll(t *testing.T) {
+	db := MustOpenDB(t)
+	defer MustCloseDB(t, db)
+	s := sqlite.NewEventService(db)
+	s.GenerateUUID = func() string {
+		return "abcd"
+	}
+
+	events, err := s.ListAll(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if events != nil {
+		t.Fatalf("expected no events, got: %v", events)
+	}
+
+	_, err = s.CreateEvent(context.Background(), themis.EventCreate{
+		Title:       "First event",
+		Description: "Just some description",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	events, err = s.ListAll(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedEvents := []*themis.Event{
+		{
+			ID:          1,
+			UUID:        "abcd",
+			Title:       "First event",
+			Description: "Just some description",
+		},
+	}
+
+	if !reflect.DeepEqual(expectedEvents, events) {
+		t.Fatalf("expected: %v\ngot: %v", expectedEvents, events)
 	}
 }
