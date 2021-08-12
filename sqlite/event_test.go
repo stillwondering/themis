@@ -38,6 +38,40 @@ func TestCreateEvent(t *testing.T) {
 	}
 }
 
+func TestFindByUUID(t *testing.T) {
+	db := MustOpenDB(t)
+	defer MustCloseDB(t, db)
+	s := sqlite.NewEventService(db)
+	s.GenerateUUID = func() string {
+		return "abcd"
+	}
+
+	_, err := s.CreateEvent(context.Background(), themis.EventCreate{
+		Title:       "First event",
+		Description: "Just some description",
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedEvent := themis.Event{
+		ID:          1,
+		UUID:        "abcd",
+		Title:       "First event",
+		Description: "Just some description",
+	}
+
+	event, err := s.FindByUUID(context.Background(), "abcd")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if expectedEvent != *event {
+		t.Fatalf("expected: %v\ngot: %v", expectedEvent, *event)
+	}
+}
+
 func TestListAll(t *testing.T) {
 	db := MustOpenDB(t)
 	defer MustCloseDB(t, db)
